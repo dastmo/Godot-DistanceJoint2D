@@ -1,7 +1,7 @@
 extends Node2D
 
 
-@onready var rope_joint_2d: DistanceJoint2D = $RopeJoint2D
+@onready var rope_joint_2d: DistanceJoint2D = $DistanceJoint2D
 @onready var rigid_body_2d: RigidBody2D = $RigidBody2D
 @onready var rigid_body_2d_2: RigidBody2D = $RigidBody2D2
 
