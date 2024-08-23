@@ -29,6 +29,16 @@ func _ready() -> void:
 	
 	if _joint_valid:
 		_set_initial_max_distance()
+	
+	if disable_collision:
+		add_collision_exceptions()
+
+
+func add_collision_exceptions() -> void:
+	if _node_a is PhysicsBody2D:
+		_node_a.add_collision_exception_with(_node_b)
+	if _node_b is PhysicsBody2D:
+		_node_b.add_collision_exception_with(_node_a)
 
 
 func _physics_process(delta: float) -> void:

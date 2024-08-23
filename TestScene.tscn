@@ -19,16 +19,8 @@ script = ExtResource("1_e4yjl")
 
 [node name="DistanceJoint2D4" type="Node2D" parent="."]
 script = ExtResource("2_miprn")
-node_a = NodePath("../Marker2D")
+node_a = NodePath("../MovingAnchor")
 node_b = NodePath("../RigidBody2D4")
-
-[node name="DistanceJoint2D5" type="Node2D" parent="."]
-script = ExtResource("2_miprn")
-node_a = NodePath("../RigidBody2D4")
-node_b = NodePath("../RigidBody2D5")
-
-[node name="Marker2D" type="Marker2D" parent="."]
-position = Vector2(355, 154)
 
 [node name="MovingAnchor" type="CharacterBody2D" parent="."]
 position = Vector2(354, 153)
@@ -48,16 +40,6 @@ position = Vector2(351, 259)
 shape = SubResource("RectangleShape2D_osnvf")
 
 [node name="Sprite2D" type="Sprite2D" parent="RigidBody2D4"]
-scale = Vector2(0.25, 0.25)
-texture = ExtResource("1_hhcti")
-
-[node name="RigidBody2D5" type="RigidBody2D" parent="."]
-position = Vector2(352, 342)
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="RigidBody2D5"]
-shape = SubResource("RectangleShape2D_osnvf")
-
-[node name="Sprite2D" type="Sprite2D" parent="RigidBody2D5"]
 scale = Vector2(0.25, 0.25)
 texture = ExtResource("1_hhcti")
 
