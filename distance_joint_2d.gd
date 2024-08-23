@@ -41,16 +41,8 @@ func _validate_joint() -> bool:
 		push_error("Not all nodes are valid. Joint is invalid.")
 		return false
 	
-	if _node_a is StaticBody2D and _node_b is StaticBody2D:
-		push_error("Both assigned nodes are StaticBody2D. Joint is invalid.")
-		return false
-	
-	if _node_a is CharacterBody2D and _node_b is CharacterBody2D:
-		push_error("Both assigned nodes are CharacterBody2D. Joint is invalid.")
-		return false
-	
-	if not _node_a is PhysicsBody2D or not _node_b is PhysicsBody2D:
-		push_error("One of the nodes does not inherit PhysicsBody2D. Joint is invalid.")
+	if not _node_a is RigidBody2D and not _node_b is RigidBody2D:
+		push_error("No Rigidbody2D attached to the joint. Joint is invalid.")
 		return false
 	
 	return true
@@ -75,7 +67,7 @@ func _apply_constraint(delta: float) -> void:
 
 
 func _apply_constraint_with_anchor_on_velocity(delta) -> void:
-	var anchor: PhysicsBody2D
+	var anchor: Node2D
 	var pendulum: RigidBody2D
 	if _node_a is RigidBody2D:
 		anchor = _node_b
