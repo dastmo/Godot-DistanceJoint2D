@@ -14,10 +14,6 @@ config/name="DistanceJoint2D"
 config/features=PackedStringArray("4.3", "Mobile")
 config/icon="res://icon.svg"
 
-[physics]
-
-common/physics_ticks_per_second=30
-
 [rendering]
 
 renderer/rendering_method="mobile"

@@ -3,42 +3,32 @@ class_name DistanceJoint2D
 
 
 @export var disable_collision: bool = true
-@export var node_a: NodePath = NodePath("")
-@export var node_b: NodePath = NodePath("")
-@export var auto_start_distance: bool = true
+@export var anchor: NodePath = NodePath("")
+@export var links: Array[RigidBody2D]
+@export var uniform_distance: bool = false
 @export var max_distance: float = 0.0
 
 
-var _node_a: Node2D
-var _node_b: Node2D
+var _anchor: Node2D
 var _joint_valid: bool = true
-var _node_a_previous: NodePath = NodePath("")
-var _node_b_previous: NodePath = NodePath("")
-var _current_distance: float = 0.0
-var _previous_v_a: Vector2 = Vector2.ZERO
-var _previous_v_b: Vector2 = Vector2.ZERO
+var _link_distances: Array[float] = []
 
 func _ready() -> void:
-	if node_a != NodePath(""):
-		_node_a = get_node(node_a)
-	if node_b != NodePath(""):
-		_node_b = get_node(node_b)
-	_node_a_previous = node_a
-	_node_b_previous = node_b
+	init_joint()
+
+
+func init_joint() -> void:
+	if anchor != NodePath(""):
+		_anchor = get_node(anchor)
 	_joint_valid = _validate_joint()
 	
-	if _joint_valid:
-		_set_initial_max_distance()
+	if not _joint_valid:
+		return
+	
+	_set_initial_distances()
 	
 	if disable_collision:
-		add_collision_exceptions()
-
-
-func add_collision_exceptions() -> void:
-	if _node_a is PhysicsBody2D:
-		_node_a.add_collision_exception_with(_node_b)
-	if _node_b is PhysicsBody2D:
-		_node_b.add_collision_exception_with(_node_a)
+		_add_collision_exceptions()
 
 
 func _physics_process(delta: float) -> void:
@@ -47,108 +37,137 @@ func _physics_process(delta: float) -> void:
 
 
 func _validate_joint() -> bool:
-	if not is_instance_valid(_node_a) or not is_instance_valid(_node_b):
-		push_error("Not all nodes are valid. Joint is invalid.")
+	if links.size() == 0:
+		push_error("No Rigidbody2D added to the links array. Joint is invalid.")
 		return false
 	
-	if not _node_a is RigidBody2D and not _node_b is RigidBody2D:
-		push_error("No Rigidbody2D attached to the joint. Joint is invalid.")
+	if links.size() < 2 and not is_instance_valid(_anchor):
+		push_error("Add at least two links or one link and one pivot. Joint is invalid.")
 		return false
+	
+	if _anchor is RigidBody2D:
+		if _anchor.freeze == false:
+			_anchor.freeze = true
+			push_warning("Rigidbody2D static pivot frozen by joint.")
 	
 	return true
 
 
-func _set_initial_max_distance() -> void:
-	if auto_start_distance:
-		max_distance = _node_a.global_position.distance_to(_node_b.global_position)
-		_current_distance = max_distance
+func _add_collision_exceptions() -> void:
+	if _anchor is PhysicsBody2D:
+		for link in links:
+			_anchor.add_collision_exception_with(link)
+	
+	for link in links:
+		for other_link in links:
+			if other_link != link:
+				link.add_collision_exception_with(other_link)
+
+
+func _set_initial_distances() -> void:
+	_link_distances.clear()
+	
+	if uniform_distance:
+		_set_uniform_distances()
+	else:
+		_set_distances()
+
+
+func _set_uniform_distances() -> void:
+	if is_instance_valid(_anchor):
+		var _links_distance: float = max_distance / links.size()
+		for i in links.size():
+			_link_distances.append(_links_distance)
+	else:
+		var _links_distance: float = max_distance / (links.size() - 1)
+		for i in links.size():
+			if i == 0:
+				_link_distances.append(0.0)
+			else:
+				_link_distances.append(_links_distance)
+
+
+func _set_distances() -> void:
+	for i in links.size():
+		if i == 0:
+			if is_instance_valid(_anchor):
+				_link_distances.append(links[i].global_position.distance_to(_anchor.global_position))
+			else:
+				_link_distances.append(0.0)
+		else:
+			_link_distances.append(links[i].global_position.distance_to(links[i - 1].global_position))
+	
+	for distance in _link_distances:
+		max_distance += distance
 
 
 func _apply_constraint(delta: float) -> void:
 	if not _joint_valid:
 		return
 	
-	_current_distance = _node_a.global_position.distance_to(_node_b.global_position)
-	
-	if not _node_a is RigidBody2D or not _node_b is RigidBody2D:
+	if is_instance_valid(_anchor):
 		_apply_constraint_with_anchor_on_velocity(delta)
 	else:
 		_apply_constraint_without_anchor_on_velocity(delta)
 
 
 func _apply_constraint_with_anchor_on_velocity(delta) -> void:
-	var anchor: Node2D
-	var pendulum: RigidBody2D
-	if _node_a is RigidBody2D:
-		anchor = _node_b
-		pendulum = _node_a
-	else:
-		anchor = _node_a
-		pendulum = _node_b
-	
-	var _next_pos: Vector2 = pendulum.global_position + (pendulum.linear_velocity * delta)
-	var _next_distance = _next_pos.distance_to(anchor.global_position)
-	
-	if _next_distance < max_distance:
-		return
-	
-	var _v = _next_pos.direction_to(anchor.global_position) * (_next_distance - max_distance)
-	
-	pendulum.linear_velocity += _v * ProjectSettings.get_setting("physics/common/physics_ticks_per_second")
+	for i in links.size():
+		var _next_pos: Vector2 = links[i].global_position + (links[i].linear_velocity * delta)
+		var _next_distance = 0.0
+		if i == 0:
+			_next_distance = _next_pos.distance_to(_anchor.global_position)
+		else:
+			_next_distance = _next_pos.distance_to(links[i-1].global_position)
+		
+		if _next_distance <= _link_distances[i]:
+			continue
+		
+		var _v: Vector2 = Vector2.ZERO
+		if i == 0:
+			_v = _next_pos.direction_to(_anchor.global_position) * (_next_distance - _link_distances[i])
+		else:
+			_v = _next_pos.direction_to(links[i-1].global_position) * (_next_distance - _link_distances[i])
+		
+		links[i].linear_velocity += _v / delta
 
 
 func _apply_constraint_without_anchor_on_velocity(delta: float) -> void:
-	if _current_distance <= max_distance:
-		return
-	
-	var _next_pos_a: Vector2 = _node_a.global_position + (_node_a.linear_velocity * delta)
-	var _next_pos_b: Vector2 = _node_b.global_position + (_node_b.linear_velocity * delta)
-	var _next_distance = _next_pos_a.distance_to(_next_pos_b)
-	
-	if _next_distance <= max_distance:
-		return
-	
-	var _v_a = (
-		_next_pos_a.direction_to(_next_pos_b) *
-		(_next_distance - max_distance) *
-		(_node_b.mass / _node_a.mass)
-	)
-	var _v_b = (
-		_next_pos_b.direction_to(_next_pos_a) *
-		(_next_distance - max_distance) *
-		(_node_a.mass / _node_b.mass)
-	)
-	
-	_node_a.linear_velocity += _v_a
-	_node_b.linear_velocity += _v_b
+	for i in links.size():
+		var _next_pos = links[i].global_position + links[i].linear_velocity * delta
+		var _next_distance_previous = 0.0
+		var _next_distance_next = 0.0
+		
+		if i == 0:
+			_next_distance_next = _next_pos.distance_to(links[i + 1].global_position)
+		elif i == links.size() - 1:
+			_next_distance_previous = _next_pos.distance_to(links[i - 1].global_position)
+		else:
+			_next_distance_next = _next_pos.distance_to(links[i + 1].global_position)
+			_next_distance_previous = _next_pos.distance_to(links[i - 1].global_position)
+			
+		
+		if i < links.size() - 1:
+			if _next_distance_next > _link_distances[i + 1]:
+				var _distance = _link_distances[i + 1] - _next_distance_next
+				links[i].linear_velocity -= (
+					_next_pos.direction_to(links[i+1].global_position) *
+					(links[i+1].mass / links[i].mass) *
+					_distance *
+					delta
+				)
+		if i > 0:
+			if _next_distance_previous > _link_distances[i]:
+				var _distance = _link_distances[i] - _next_distance_previous
+				links[i].linear_velocity -= (
+					_next_pos.direction_to(links[i-1].global_position) *
+					(links[i-1].mass / links[i].mass) *
+					_distance *
+					delta
+				)
 
 
-# This method does not modify velocity directly.
-# However, it is a lot more jittery.
-func _apply_constraint_with_anchor(delta: float) -> void:
-	var anchor: PhysicsBody2D
-	var pendulum: RigidBody2D
-	if _node_a is RigidBody2D:
-		anchor = _node_b
-		pendulum = _node_a
-	else:
-		anchor = _node_a
-		pendulum = _node_b
-	
-	var _next_pos = pendulum.global_position + (pendulum.linear_velocity * delta)
-	var _next_distance = _next_pos.distance_to(anchor.global_position)
-	
-	if _next_distance <= max_distance:
-		return
-	
-	var vm = 2 * (_current_distance - max_distance) / delta
-	var a = vm / (delta / 2)
-	var Fd = get_drag_force(pendulum)
-	var Fnet = pendulum.mass * a + Fd
-	pendulum.apply_central_force(pendulum.global_position.direction_to(anchor.global_position) * Fnet * delta)
-
-
-func get_drag_force(body: RigidBody2D) -> float:
+func _get_drag_force(body: RigidBody2D) -> float:
 	if body.linear_damp_mode == RigidBody2D.DAMP_MODE_COMBINE:
 		return (
 			1.0 -
@@ -168,17 +187,9 @@ func get_drag_force(body: RigidBody2D) -> float:
 func _monitor_node_change() -> void:
 	var nodes_changed: bool = false
 	
-	if _node_a_previous != node_a:
-		_node_a = get_node(node_a)
-		_node_a_previous = node_a
-		nodes_changed = true
-	
-	if _node_b_previous != node_b:
-		_node_b = get_node(node_b)
-		_node_b_previous = node_b
-		nodes_changed = true
+	#TODO: Implement node change monitoring.
 	
 	if nodes_changed:
 		_joint_valid = _validate_joint()
-		if _joint_valid and auto_start_distance:
-			_set_initial_max_distance()
+		if _joint_valid:
+			_set_initial_distances()
