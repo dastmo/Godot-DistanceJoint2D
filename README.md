@@ -25,3 +25,4 @@ A simple 2D distance joint for Godot that is not a spring.
 
 ## Planned features
 * Mode that allows the links to orbit a single pivot, instead of being part of a chain.
+* Mode that keeps the distance constant (think a metal bar, not string).
