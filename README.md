@@ -1,6 +1,8 @@
 # Godot Distance Joint
 A simple 2D distance joint for Godot that is not a spring.
 
+This script does not allow the creation of double/triple/etc. pendulums and that is by design. Rigidbody2Ds will behave as if linked by a string that does have some mass.
+
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/L4L2128QIJ)
 
 ## Quickstart
@@ -26,3 +28,4 @@ A simple 2D distance joint for Godot that is not a spring.
 ## Planned features
 * Mode that allows the links to orbit a single pivot, instead of being part of a chain.
 * Mode that keeps the distance constant (think a metal bar, not string).
+* Mode that allows the creation of chaotic pendulums.
