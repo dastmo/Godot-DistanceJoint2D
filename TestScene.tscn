@@ -25,7 +25,6 @@ size = Vector2(2000, 20)
 script = ExtResource("2_miprn")
 pivot = NodePath("../MovingPivot")
 links = [NodePath("../RigidBody2D4")]
-uniform_distance = true
 total_distance = 200.0
 
 [node name="MovingPivot" type="CharacterBody2D" parent="." node_paths=PackedStringArray("joint")]
@@ -55,6 +54,7 @@ position = Vector2(57, 67)
 script = ExtResource("2_miprn")
 pivot = NodePath("../StaticBody2D")
 links = [NodePath("../RigidBody2D"), NodePath("../RigidBody2D2"), NodePath("../RigidBody2D3"), NodePath("../RigidBody2D7")]
+auto_distance = true
 
 [node name="StaticBody2D" type="StaticBody2D" parent="."]
 position = Vector2(865, 147)
@@ -109,6 +109,7 @@ texture = ExtResource("1_hhcti")
 script = ExtResource("2_miprn")
 disable_collision = false
 links = [NodePath("../RigidBody2D8"), NodePath("../RigidBody2D5"), NodePath("../RigidBody2D9")]
+auto_distance = true
 
 [node name="StaticBody2D2" type="StaticBody2D" parent="."]
 position = Vector2(475, 259)

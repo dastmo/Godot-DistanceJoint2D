@@ -5,7 +5,7 @@ class_name DistanceJoint2D
 @export var disable_collision: bool = true
 @export var pivot: NodePath = NodePath("")
 @export var links: Array[RigidBody2D]
-@export var uniform_distance: bool = false
+@export var auto_distance: bool = false
 @export var total_distance: float = 0.0
 
 
@@ -17,7 +17,7 @@ var _link_distances: Array[float] = []
 var _previous_disable_collision: bool
 var _previous_pivot: NodePath
 var _previous_links: Array[RigidBody2D]
-var _previous_uniform_distance: bool
+var _previous_auto_distance: bool
 var _previous_total_distance: float
 
 func _ready() -> void:
@@ -28,7 +28,7 @@ func _recalculate_joint() -> void:
 	_previous_disable_collision = disable_collision
 	_previous_pivot = pivot
 	_previous_links = links.duplicate()
-	_previous_uniform_distance = uniform_distance
+	_previous_auto_distance = auto_distance
 	
 	if pivot != NodePath(""):
 		_pivot = get_node(pivot)
@@ -99,7 +99,7 @@ func _remove_collision_exceptions() -> void:
 func _set_initial_distances() -> void:
 	_link_distances.clear()
 	
-	if uniform_distance:
+	if not auto_distance:
 		_set_uniform_distances()
 	else:
 		_set_distances()
@@ -194,7 +194,7 @@ func _check_for_changes() -> bool:
 	if links.hash() != _previous_links.hash():
 		return true
 	
-	if uniform_distance != _previous_uniform_distance:
+	if auto_distance != _previous_auto_distance:
 		return true
 	
 	if total_distance != _previous_total_distance:
