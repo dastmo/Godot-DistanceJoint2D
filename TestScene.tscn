@@ -1,6 +1,5 @@
-[gd_scene load_steps=10 format=3 uid="uid://dkf2gjln7bweg"]
+[gd_scene load_steps=9 format=3 uid="uid://dkf2gjln7bweg"]
 
-[ext_resource type="Script" path="res://test_scene.gd" id="1_e4yjl"]
 [ext_resource type="Texture2D" uid="uid://byl7ysneaas0l" path="res://icon.svg" id="1_hhcti"]
 [ext_resource type="Script" path="res://distance_joint_2d.gd" id="2_miprn"]
 [ext_resource type="Script" path="res://moving_anchor.gd" id="3_35alp"]
@@ -21,16 +20,18 @@ size = Vector2(30, 30)
 size = Vector2(2000, 20)
 
 [node name="TestScene" type="Node2D"]
-script = ExtResource("1_e4yjl")
 
 [node name="DistanceJoint2D4" type="Node2D" parent="." node_paths=PackedStringArray("links")]
 script = ExtResource("2_miprn")
 pivot = NodePath("../MovingPivot")
 links = [NodePath("../RigidBody2D4")]
+uniform_distance = true
+total_distance = 200.0
 
-[node name="MovingPivot" type="CharacterBody2D" parent="."]
+[node name="MovingPivot" type="CharacterBody2D" parent="." node_paths=PackedStringArray("joint")]
 position = Vector2(143, 132)
 script = ExtResource("3_35alp")
+joint = NodePath("../DistanceJoint2D4")
 
 [node name="Sprite2D" type="Sprite2D" parent="MovingPivot"]
 scale = Vector2(0.5, 0.5)
