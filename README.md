@@ -1,4 +1,4 @@
-# Godot Distance Joint
+# Godot DistanceJoint2D
 A simple 2D distance joint for Godot that is not a spring.
 
 This script does not allow the creation of double/triple/etc. pendulums and that is by design. Rigidbody2Ds will behave as if linked by a string that does have some mass.
