@@ -7,11 +7,13 @@ class_name DistanceJoint2D
 @export var links: Array[RigidBody2D]
 @export var auto_distance: bool = false
 @export var total_distance: float = 0.0
+@export var joint_type: JointType = JointType.CHAIN
 
 
 var _pivot: Node2D
 var _joint_valid: bool = true
 var _link_distances: Array[float] = []
+
 
 # Variables used to monitor for changes
 var _previous_disable_collision: bool
@@ -19,6 +21,11 @@ var _previous_pivot: NodePath
 var _previous_links: Array[RigidBody2D]
 var _previous_auto_distance: bool
 var _previous_total_distance: float
+var _previous_joint_type: JointType
+
+
+enum JointType {CHAIN, ORBIT}
+
 
 func _ready() -> void:
 	_recalculate_joint()
@@ -29,6 +36,7 @@ func _recalculate_joint() -> void:
 	_previous_pivot = pivot
 	_previous_links = links.duplicate()
 	_previous_auto_distance = auto_distance
+	_previous_joint_type = joint_type
 	
 	if pivot != NodePath(""):
 		_pivot = get_node(pivot)
@@ -54,7 +62,10 @@ func _physics_process(delta: float) -> void:
 	if _check_for_changes():
 		_recalculate_joint()
 	
-	_apply_constraint(delta)
+	if joint_type == JointType.CHAIN:
+		_apply_chain_constraint(delta)
+	elif joint_type == JointType.ORBIT:
+		_apply_orbit_constraint(delta)
 
 
 func _validate_joint() -> bool:
@@ -99,10 +110,13 @@ func _remove_collision_exceptions() -> void:
 func _set_initial_distances() -> void:
 	_link_distances.clear()
 	
-	if not auto_distance:
-		_set_uniform_distances()
-	else:
-		_set_distances()
+	if joint_type == JointType.CHAIN:
+		if not auto_distance:
+			_set_uniform_distances()
+		else:
+			_set_distances()
+	elif joint_type == JointType.ORBIT:
+		_set_orbit_distances()
 	
 	_previous_total_distance = total_distance
 
@@ -135,7 +149,14 @@ func _set_distances() -> void:
 		total_distance += distance
 
 
-func _apply_constraint(delta: float) -> void:
+func _set_orbit_distances() -> void:
+	var center: Vector2 = _get_orbit_center()
+	
+	for i in links.size():
+		_link_distances.append(links[i].global_position.distance_to(center))
+
+
+func _apply_chain_constraint(delta: float) -> void:
 	if not _joint_valid:
 		return
 	
@@ -184,6 +205,36 @@ func _apply_constraint(delta: float) -> void:
 					)
 
 
+func _apply_orbit_constraint(delta: float) -> void:
+	var center: Vector2 = _get_orbit_center()
+	
+	for i in links.size():
+		var _next_pos: Vector2 = links[i].global_position + (links[i].linear_velocity * delta)
+		var _next_distance = 0.0
+		_next_distance = _next_pos.distance_to(center)
+		
+		if _next_distance <= _link_distances[i]:
+			continue
+		
+		var _v: Vector2 = Vector2.ZERO
+		_v = _next_pos.direction_to(center) * (_next_distance - _link_distances[i])
+		
+		links[i].linear_velocity += _v / delta
+
+
+func _get_orbit_center() -> Vector2:
+	var center: Vector2 = Vector2.ZERO
+	
+	if is_instance_valid(_pivot):
+		center = _pivot.global_position
+	else:
+		for link in links:
+			center += link.global_position
+		center = center / links.size()
+	
+	return center
+
+
 func _check_for_changes() -> bool:
 	if disable_collision != _previous_disable_collision:
 		return true
@@ -198,6 +249,9 @@ func _check_for_changes() -> bool:
 		return true
 	
 	if total_distance != _previous_total_distance:
+		return true
+	
+	if joint_type != _previous_joint_type:
 		return true
 	
 	return false

@@ -21,11 +21,11 @@ This script does not allow the creation of double/triple/etc. pendulums and that
 |links|Array[Rigidbody2D]|The array that holds the Rigidbody2D nodes that need to be in the system. They will be linked to each other in the order they are added to the array.|N/A|
 |auto_distance|bool|If true, the maximum distance between the links will be calculated from their position at the time of joint initialization. total_distance will be the sum of all the distances between links. This allows for the distances between links to not be uniform. If false, the distance between links will be uniform and based on the total_distance of the joint.|false|
 |total_distance|float|The total allowed distance between the pivot (or first link if no pivot is set) and the last link in the system. Changing it at runtime will have no effect if auto_distance is true.|
+|joint_type|JointType (enum)|The type of the joint. If set to CHAIN, links will be linked in a chain one after the other. If set to ORBIT, they will orbit the pivot or common centerpoint (if no pivot is assigned.)|JointType.CHAIN|
 
 ## Known Issues
 * When having multiple links and a pivot assigned, the second link in the chain will jitter a lot.
 
 ## Planned features
-* Mode that allows the links to orbit a single pivot, instead of being part of a chain.
 * Mode that keeps the distance constant (think a metal bar, not string).
 * Mode that allows the creation of chaotic pendulums.
