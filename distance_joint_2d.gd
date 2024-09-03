@@ -176,11 +176,6 @@ func _apply_constraints(delta: float) -> void:
 		_apply_orbit_constraint(delta)
 	elif joint_type == JointType.ORBIT and fixed_distance:
 		_apply_fixed_orbit_constraint(delta)
-	
-	if is_instance_valid(_pivot):
-		print("{current} / {total}".format(
-			{"current" : _pivot.global_position.distance_to(links[links.size() - 1].global_position),
-			"total" : total_distance}))
 
 
 func _apply_chain_constraint(delta: float) -> void:
