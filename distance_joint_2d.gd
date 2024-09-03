@@ -150,10 +150,14 @@ func _set_distances() -> void:
 
 
 func _set_orbit_distances() -> void:
-	var center: Vector2 = _get_orbit_center()
-	
-	for i in links.size():
-		_link_distances.append(links[i].global_position.distance_to(center))
+	if auto_distance:
+		var center: Vector2 = _get_orbit_center()
+		
+		for i in links.size():
+			_link_distances.append(links[i].global_position.distance_to(center))
+	else:
+		for i in links.size():
+			_link_distances.append(total_distance)
 
 
 func _apply_chain_constraint(delta: float) -> void:

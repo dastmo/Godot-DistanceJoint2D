@@ -54,7 +54,8 @@ position = Vector2(57, 67)
 script = ExtResource("2_miprn")
 pivot = NodePath("../StaticBody2D")
 links = [NodePath("../RigidBody2D"), NodePath("../RigidBody2D2"), NodePath("../RigidBody2D3"), NodePath("../RigidBody2D7")]
-auto_distance = true
+total_distance = 100.0
+joint_type = 1
 
 [node name="StaticBody2D" type="StaticBody2D" parent="."]
 position = Vector2(865, 147)
