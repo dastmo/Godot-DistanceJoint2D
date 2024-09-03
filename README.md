@@ -22,10 +22,11 @@ This script does not allow the creation of double/triple/etc. pendulums and that
 |auto_distance|bool|If true, the maximum distance between the links will be calculated from their position at the time of joint initialization. total_distance will be the sum of all the distances between links. This allows for the distances between links to not be uniform. If false, the distance between links will be uniform and based on the total_distance of the joint.|false|
 |total_distance|float|The total allowed distance between the pivot (or first link if no pivot is set) and the last link in the system. Changing it at runtime will have no effect if auto_distance is true.|
 |joint_type|JointType (enum)|The type of the joint. If set to CHAIN, links will be linked in a chain one after the other. If set to ORBIT, they will orbit the pivot or common centerpoint (if no pivot is assigned.)|JointType.CHAIN|
+|fixed_distance|bool|If TRUE, the joint will try to keep a fixed distance between the the links.|false|
 
 ## Known Issues
 * When having multiple links and a pivot assigned, the second link in the chain will jitter a lot.
+* Currently, if fixed_distance is true, the joint overstretches, akin to a spring. Needs improvement.
 
 ## Planned features
-* Mode that keeps the distance constant (think a metal bar, not string).
 * Mode that allows the creation of chaotic pendulums.

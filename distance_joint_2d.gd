@@ -8,6 +8,7 @@ class_name DistanceJoint2D
 @export var auto_distance: bool = false
 @export var total_distance: float = 0.0
 @export var joint_type: JointType = JointType.CHAIN
+@export var fixed_distance: bool = false
 
 
 var _pivot: Node2D
@@ -22,6 +23,7 @@ var _previous_links: Array[RigidBody2D]
 var _previous_auto_distance: bool
 var _previous_total_distance: float
 var _previous_joint_type: JointType
+var _previous_fixed_distance: bool
 
 
 enum JointType {CHAIN, ORBIT}
@@ -37,6 +39,7 @@ func _recalculate_joint() -> void:
 	_previous_links = links.duplicate()
 	_previous_auto_distance = auto_distance
 	_previous_joint_type = joint_type
+	_previous_fixed_distance = fixed_distance
 	
 	if pivot != NodePath(""):
 		_pivot = get_node(pivot)
@@ -62,10 +65,7 @@ func _physics_process(delta: float) -> void:
 	if _check_for_changes():
 		_recalculate_joint()
 	
-	if joint_type == JointType.CHAIN:
-		_apply_chain_constraint(delta)
-	elif joint_type == JointType.ORBIT:
-		_apply_orbit_constraint(delta)
+	_apply_constraints(delta)
 
 
 func _validate_joint() -> bool:
@@ -119,6 +119,8 @@ func _set_initial_distances() -> void:
 		_set_orbit_distances()
 	
 	_previous_total_distance = total_distance
+	
+	_set_links_initial_positions()
 
 
 func _set_uniform_distances() -> void:
@@ -136,6 +138,7 @@ func _set_uniform_distances() -> void:
 
 
 func _set_distances() -> void:
+	total_distance = 0.0
 	for i in links.size():
 		if i == 0:
 			if is_instance_valid(_pivot):
@@ -151,6 +154,7 @@ func _set_distances() -> void:
 
 func _set_orbit_distances() -> void:
 	if auto_distance:
+		total_distance = 0.0
 		var center: Vector2 = _get_orbit_center()
 		
 		for i in links.size():
@@ -160,10 +164,26 @@ func _set_orbit_distances() -> void:
 			_link_distances.append(total_distance)
 
 
-func _apply_chain_constraint(delta: float) -> void:
+func _apply_constraints(delta: float) -> void:
 	if not _joint_valid:
 		return
 	
+	if joint_type == JointType.CHAIN and not fixed_distance:
+		_apply_chain_constraint(delta)
+	elif joint_type == JointType.CHAIN and fixed_distance:
+		_apply_fixed_chain_constraint(delta)
+	elif joint_type == JointType.ORBIT and not fixed_distance:
+		_apply_orbit_constraint(delta)
+	elif joint_type == JointType.ORBIT and fixed_distance:
+		_apply_fixed_orbit_constraint(delta)
+	
+	if is_instance_valid(_pivot):
+		print("{current} / {total}".format(
+			{"current" : _pivot.global_position.distance_to(links[links.size() - 1].global_position),
+			"total" : total_distance}))
+
+
+func _apply_chain_constraint(delta: float) -> void:
 	for i in links.size():
 		if i == 0 and is_instance_valid(_pivot):
 			var _next_pos: Vector2 = links[i].global_position + (links[i].linear_velocity * delta)
@@ -209,6 +229,62 @@ func _apply_chain_constraint(delta: float) -> void:
 					)
 
 
+func _apply_fixed_chain_constraint(delta: float) -> void:
+	for i in links.size():
+		if i == 0 and is_instance_valid(_pivot):
+			var _next_pos: Vector2 = links[i].global_position + (links[i].linear_velocity * delta)
+			var _next_distance = 0.0
+			_next_distance = _next_pos.distance_to(_pivot.global_position)
+			
+			var _v: Vector2 = Vector2.ZERO
+			if _next_distance > _link_distances[i]:
+				_v = _next_pos.direction_to(_pivot.global_position) * (_next_distance - _link_distances[i])
+			elif _next_distance < _link_distances[i]:
+				_v = _pivot.global_position.direction_to(_next_pos) * (_link_distances[i] - _next_distance)
+			
+			links[i].linear_velocity += _v / delta
+		else:
+			var _next_pos = links[i].global_position + links[i].linear_velocity * delta
+			var _next_distance_previous = 0.0
+			var _next_distance_next = 0.0
+			
+			if i == 0:
+				_next_distance_next = _next_pos.distance_to(links[i + 1].global_position)
+			elif i == links.size() - 1:
+				_next_distance_previous = _next_pos.distance_to(links[i - 1].global_position)
+			else:
+				_next_distance_next = _next_pos.distance_to(links[i + 1].global_position)
+				_next_distance_previous = _next_pos.distance_to(links[i - 1].global_position)
+				
+			
+			if i < links.size() - 1:
+				if _next_distance_next > _link_distances[i + 1]:
+					var _distance = _link_distances[i + 1] - _next_distance_next
+					links[i].linear_velocity -= (
+						_next_pos.direction_to(links[i+1].global_position) *
+						_distance
+					)
+				elif _next_distance_next < _link_distances[i + 1]:
+					var _distance = _next_distance_next - _link_distances[i + 1]
+					links[i].linear_velocity -= (
+						links[i+1].global_position.direction_to(_next_pos) *
+						_distance
+					)
+			if i > 0:
+				if _next_distance_previous > _link_distances[i]:
+					var _distance = _link_distances[i] - _next_distance_previous
+					links[i].linear_velocity -= (
+						_next_pos.direction_to(links[i-1].global_position) *
+						_distance
+					)
+				elif _next_distance_previous < _link_distances[i]:
+					var _distance = _next_distance_previous - _link_distances[i]
+					links[i].linear_velocity -= (
+						links[i-1].global_position.direction_to(_next_pos) *
+						_distance
+					)
+
+
 func _apply_orbit_constraint(delta: float) -> void:
 	var center: Vector2 = _get_orbit_center()
 	
@@ -226,6 +302,27 @@ func _apply_orbit_constraint(delta: float) -> void:
 		links[i].linear_velocity += _v / delta
 
 
+func _apply_fixed_orbit_constraint(delta: float) -> void:
+	var center: Vector2 = _get_orbit_center()
+	
+	for i in links.size():
+		var _next_pos: Vector2 = links[i].global_position + (links[i].linear_velocity * delta)
+		var _next_distance = 0.0
+		_next_distance = _next_pos.distance_to(center)
+		
+		if _next_distance == _link_distances[i]:
+			continue
+		
+		var _v: Vector2 = Vector2.ZERO
+		
+		if _next_distance > _link_distances[i]:
+			_v = _next_pos.direction_to(center) * (_next_distance - _link_distances[i])
+		elif _next_distance < _link_distances[i]:
+			_v = center.direction_to(_next_pos) * (_link_distances[i] - _next_distance)
+		
+		links[i].linear_velocity += _v / delta
+
+
 func _get_orbit_center() -> Vector2:
 	var center: Vector2 = Vector2.ZERO
 	
@@ -237,6 +334,17 @@ func _get_orbit_center() -> Vector2:
 		center = center / links.size()
 	
 	return center
+
+
+func _set_links_initial_positions() -> void:
+	for i in links.size():
+		var _dir: Vector2
+		if i == 0 and is_instance_valid(_pivot):
+			_dir = _pivot.global_position.direction_to(links[i].global_position)
+			links[i].global_position = _pivot.global_position + (_dir * _link_distances[i])
+		elif i > 0:
+			_dir = links[i - 1].global_position.direction_to(links[i].global_position)
+			links[i].global_position = links[i - 1].global_position + (_dir * _link_distances[i])
 
 
 func _check_for_changes() -> bool:
@@ -256,6 +364,9 @@ func _check_for_changes() -> bool:
 		return true
 	
 	if joint_type != _previous_joint_type:
+		return true
+	
+	if fixed_distance != _previous_fixed_distance:
 		return true
 	
 	return false
